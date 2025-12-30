@@ -5,24 +5,32 @@
  */
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+/**
+ * Get Supabase environment variables
+ * Lazy check - only validates when function is called, not at module load time
+ */
+function getSupabaseConfig() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error(
-    'Missing Supabase environment variables: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY'
-  );
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error(
+      'Missing Supabase environment variables: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY'
+    );
+  }
+
+  return {
+    url: supabaseUrl,
+    key: supabaseAnonKey,
+  };
 }
-
-// Type assertion: we've checked above that these are defined
-const url: string = supabaseUrl;
-const key: string = supabaseAnonKey;
 
 /**
  * Create Supabase client for server-side operations
  * This client uses ANON_KEY and relies on RLS for security
  */
 export function createServerClient() {
+  const { url, key } = getSupabaseConfig();
   return createClient(url, key, {
     auth: {
       persistSession: false,
