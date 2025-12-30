@@ -3,7 +3,7 @@ CF-X Concurrency Control Module
 Per-user streaming concurrency cap enforcement
 """
 import os
-from typing import Dict, Set
+from typing import Dict, Set, Optional
 from uuid import UUID
 from collections import defaultdict
 import asyncio
