@@ -36,10 +36,10 @@ class Config:
             # If not set, try common paths
             if not config_path:
                 possible_paths = [
-                    "/config/models.yaml",  # Container path
+                    "/config/models.yaml",  # Container path (copied by Dockerfile)
+                    "config/models.yaml",  # Local path (in services/cfx-router/config/)
                     "../config/models.yaml",  # Relative from services/cfx-router
                     "../../config/models.yaml",  # From app directory
-                    "config/models.yaml",  # Current directory
                 ]
                 
                 # Try to find config file
