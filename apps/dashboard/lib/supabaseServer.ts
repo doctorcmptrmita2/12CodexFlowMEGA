@@ -14,12 +14,16 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
+// Type assertion: we've checked above that these are defined
+const url: string = supabaseUrl;
+const key: string = supabaseAnonKey;
+
 /**
  * Create Supabase client for server-side operations
  * This client uses ANON_KEY and relies on RLS for security
  */
 export function createServerClient() {
-  return createClient(supabaseUrl, supabaseAnonKey, {
+  return createClient(url, key, {
     auth: {
       persistSession: false,
     },
