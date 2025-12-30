@@ -25,6 +25,9 @@ COPY --from=builder /root/.local /usr/local
 # Copy application code
 COPY . .
 
+# Create /config directory (config will use defaults if file not found)
+RUN mkdir -p /config
+
 # Create non-root user
 RUN useradd -m -u 1000 cfx && \
     chown -R cfx:cfx /app

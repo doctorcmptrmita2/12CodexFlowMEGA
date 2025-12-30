@@ -27,12 +27,30 @@ class Config:
         
         Args:
             config_path: Optional path to models.yaml. 
-                        Defaults to /config/models.yaml relative to project root
+                        Defaults to /config/models.yaml or environment variable
         """
         if config_path is None:
-            # Default: assume running from project root
-            project_root = Path(__file__).parent.parent.parent.parent
-            config_path = project_root / "config" / "models.yaml"
+            # Try environment variable first
+            config_path = os.getenv("CFX_CONFIG_PATH")
+            
+            # If not set, try common paths
+            if not config_path:
+                possible_paths = [
+                    "/config/models.yaml",  # Container path
+                    "../config/models.yaml",  # Relative from services/cfx-router
+                    "../../config/models.yaml",  # From app directory
+                    "config/models.yaml",  # Current directory
+                ]
+                
+                # Try to find config file
+                for path in possible_paths:
+                    if os.path.exists(path):
+                        config_path = path
+                        break
+                
+                # If still not found, use default
+                if not config_path:
+                    config_path = "/config/models.yaml"  # Will use fallback
         
         self.config_path = Path(config_path)
         self._stages: Dict[str, StageConfig] = {}
@@ -42,9 +60,42 @@ class Config:
     def _load_config(self) -> None:
         """Load configuration from YAML file"""
         if not self.config_path.exists():
-            raise FileNotFoundError(
-                f"Configuration file not found: {self.config_path}"
+            # Fallback to default config if file not found
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                f"Configuration file not found: {self.config_path}. Using default stage mappings."
             )
+            
+            # Use default config
+            self._stages = {
+                "plan": StageConfig(
+                    model="claude-3-5-sonnet-20241022",
+                    description="Architect stage",
+                    max_tokens=4096,
+                    temperature=0.7
+                ),
+                "code": StageConfig(
+                    model="deepseek-chat",
+                    description="Developer stage",
+                    max_tokens=16384,
+                    temperature=0.3
+                ),
+                "review": StageConfig(
+                    model="gpt-4o-mini",
+                    description="Reviewer stage",
+                    max_tokens=4096,
+                    temperature=0.2
+                ),
+                "direct": StageConfig(
+                    model=None,
+                    description="Direct mode (disabled)",
+                    max_tokens=None,
+                    temperature=None
+                )
+            }
+            self._default_stage = "plan"
+            return
         
         with open(self.config_path, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f)
