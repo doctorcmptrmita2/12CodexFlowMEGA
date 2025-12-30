@@ -19,14 +19,11 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Copy Python dependencies from builder
-COPY --from=builder /root/.local /root/.local
+# Copy Python dependencies from builder to system location
+COPY --from=builder /root/.local /usr/local
 
 # Copy application code
 COPY . .
-
-# Make sure scripts in .local are usable
-ENV PATH=/root/.local/bin:$PATH
 
 # Create non-root user
 RUN useradd -m -u 1000 cfx && \

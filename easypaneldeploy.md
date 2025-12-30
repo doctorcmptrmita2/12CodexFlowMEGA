@@ -22,13 +22,22 @@ Bu rehber, CF-X (CodexFlow) v3 platformunu EasyPanel'de deploy etmek için adım
 
 ### Gereksinimler
 
-- ✅ EasyPanel hesabı ve erişimi
-- ✅ Supabase projesi (ücretsiz tier yeterli)
+- ✅ **EasyPanel hesabı** (Container hosting için)
+- ✅ **Supabase hesabı** (Database için - ücretsiz tier yeterli)
+  - ⚠️ **ÖNEMLİ:** Supabase, EasyPanel'den **BAĞIMSIZ** bir servistir
+  - Supabase projesini [supabase.com](https://app.supabase.com) web sitesinde oluşturursunuz
+  - EasyPanel'de Supabase projesi oluşturulmaz!
 - ✅ Domain adı (opsiyonel, IP ile de çalışır)
-- ✅ Provider API keys:
-  - Anthropic API Key
-  - DeepSeek API Key
-  - OpenAI API Key (opsiyonel)
+- ✅ **Provider API Keys:**
+  - **Seçenek 1 (Önerilen):** OpenRouter API Key (tek key ile tüm modellere erişim)
+  - **Seçenek 2:** Direkt provider keys (Anthropic, DeepSeek, OpenAI ayrı ayrı)
+
+### Servis Mimarisi
+
+CF-X platformu **2 farklı platform** kullanır:
+
+1. **EasyPanel** → Container hosting (Router, Dashboard, LiteLLM servisleri burada çalışır)
+2. **Supabase** → Database & Auth servisi (ayrı bir platform, web dashboard üzerinden yönetilir)
 
 ### Hazırlanacak Dosyalar
 
@@ -63,43 +72,104 @@ Projenizi EasyPanel'e yüklemek için iki yöntem var:
 
 ## Supabase Kurulumu (Otomatik)
 
+⚠️ **ÖNEMLİ:** Supabase, EasyPanel'den **BAĞIMSIZ** bir servistir. Supabase projesini EasyPanel'de değil, **Supabase'in kendi web dashboard'unda** oluşturmanız gerekir.
+
 ### Yöntem 1: Otomatik Setup (Önerilen) 🚀
 
 Supabase schema'sını tek komutla otomatik deploy edebilirsiniz:
 
-#### Adım 1: Supabase Projesi Oluşturma
+#### Adım 1: Supabase Projesi Oluşturma (Supabase Dashboard'unda)
 
-1. [Supabase Dashboard](https://app.supabase.com) → **New Project**
-2. Proje bilgilerini doldurun:
-   - **Name:** `cfx-database` (veya farklı bir isim - EasyPanel projesinden bağımsız)
+**📍 Bu adım EasyPanel'de DEĞİL, Supabase web sitesinde yapılır:**
+
+1. Tarayıcınızda [Supabase Dashboard](https://app.supabase.com) açın
+2. **New Project** butonuna tıklayın
+3. Proje bilgilerini doldurun:
+   - **Name:** `cfx-database` (veya istediğiniz isim - EasyPanel projesinden bağımsız)
    - **Database Password:** Güçlü bir şifre oluşturun (kaydedin!)
    - **Region:** Size en yakın region seçin
-3. **Create new project** butonuna tıklayın (2-3 dakika sürebilir)
+4. **Create new project** butonuna tıklayın (2-3 dakika sürebilir)
+
+**💡 Not:** Bu Supabase'in kendi servisi, EasyPanel ile ilgili değil. Supabase ücretsiz tier'da kullanılabilir.
 
 #### Adım 2: Schema'yı Otomatik Deploy Etme
 
-**Seçenek A: Supabase CLI ile (En Kolay)**
+**Seçenek A: Supabase CLI ile (Opsiyonel - Gelişmiş Kullanıcılar İçin)**
 
-```bash
-# 1. Supabase CLI'yi yükleyin
-npm install -g supabase
+**Supabase CLI Nedir?**
+- Supabase CLI, Supabase projelerini komut satırından yönetmenizi sağlayan bir araçtır
+- Schema'ları, migration'ları ve diğer ayarları terminal'den deploy edebilirsiniz
+- **Opsiyonel:** Eğer CLI kullanmak istemiyorsanız, **Seçenek B (SQL Editor)** çok daha basittir ve önerilir!
 
-# 2. Supabase'e login olun
+**⚠️ ÖNEMLİ:** Supabase CLI artık `npm install -g` ile kurulamıyor! Windows için farklı yöntemler gerekiyor.
+
+**Windows'ta Supabase CLI Kurulumu:**
+
+**Yöntem 1: Scoop (Önerilen - Windows için)**
+
+```powershell
+# 1. Scoop yüklü değilse önce Scoop'u kurun:
+# PowerShell'i Administrator olarak açın ve çalıştırın:
+Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+irm get.scoop.sh | iex
+
+# 2. Supabase CLI'yi kurun:
+scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
+scoop install supabase
+
+# 3. Kontrol:
+supabase --version
+```
+
+**Yöntem 2: Chocolatey (Alternatif)**
+
+```powershell
+# 1. Chocolatey yüklü değilse önce kurun (Administrator PowerShell):
+Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+
+# 2. Supabase CLI'yi kurun:
+choco install supabase
+
+# 3. Kontrol:
+supabase --version
+```
+
+**Yöntem 3: npx ile (npm yüklüyse, geçici kullanım)**
+
+```powershell
+# Her seferinde npx ile çalıştırın (global kurulum yok):
+npx supabase@latest login
+npx supabase@latest db push --db-url "postgresql://..."
+```
+
+**CLI Kullanımı (Kurulum sonrası):**
+
+```powershell
+# 1. Supabase'e login olun (tarayıcı açılacak)
 supabase login
 
-# 3. Schema'yı deploy edin
-cd infra/supabase
+# 2. Schema'yı deploy edin
+cd C:\wamp64\www\12CodexFlowMEGA\infra\supabase
 supabase db push --db-url "postgresql://postgres:[PASSWORD]@db.[PROJECT_REF].supabase.co:5432/postgres"
 ```
 
-**Seçenek B: SQL Editor ile (Manuel - Daha Basit)**
+**💡 ÖNERİ:** CLI kurulumu karmaşık olabilir. **Seçenek B (SQL Editor)** çok daha basit ve hiçbir şey kurmanıza gerek yok - sadece tarayıcıdan yapılır!
 
-1. Supabase Dashboard → **SQL Editor**
-2. **New Query** butonuna tıklayın
-3. `infra/supabase/schema.sql` dosyasının içeriğini kopyalayın
-4. SQL Editor'e yapıştırın
-5. **Run** butonuna tıklayın
-6. ✅ **Done!** Tüm tablolar, indexler ve RPC function oluşturuldu
+**Seçenek B: SQL Editor ile (Manuel - Daha Basit) ⭐ ÖNERİLEN**
+
+**Bu yöntem en kolaydır - hiçbir şey kurmanıza gerek yok!**
+
+1. Tarayıcınızda Supabase Dashboard açın (https://app.supabase.com)
+2. Projenizi seçin
+3. Sol menüden **SQL Editor** sekmesine tıklayın
+4. **New Query** butonuna tıklayın
+5. `infra/supabase/schema.sql` dosyasını açın (proje klasörünüzde)
+6. Dosyanın **tüm içeriğini** kopyalayın (Ctrl+A, Ctrl+C)
+7. SQL Editor'e yapıştırın (Ctrl+V)
+8. **Run** butonuna tıklayın (veya F5)
+9. ✅ **Done!** Tüm tablolar, indexler ve RPC function oluşturuldu
+
+**💡 İpucu:** Eğer hata alırsanız, SQL'i parça parça çalıştırabilirsiniz (her CREATE TABLE ayrı ayrı).
 
 **Seçenek C: Setup Script ile**
 
@@ -113,13 +183,17 @@ chmod +x scripts/setup-supabase.sh
 
 Eğer otomatik setup çalışmazsa, aşağıdaki adımları manuel takip edin:
 
-### Adım 3: Supabase API Keys
+### Adım 3: Supabase API Keys (Supabase Web Sitesinde)
 
-1. Supabase Dashboard → **Settings** → **API**
-2. Şu bilgileri kopyalayın (sonraki adımlarda kullanacağız):
-   - **Project URL** → `SUPABASE_URL`
-   - **service_role key** → `SUPABASE_SERVICE_ROLE_KEY` (⚠️ Gizli tutun!)
-   - **anon public key** → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+**📍 Bu adım da Supabase web dashboard'unda yapılır (EasyPanel'de değil!):**
+
+1. Supabase Dashboard (web sitesi) → **Settings** → **API**
+2. Şu bilgileri kopyalayın (bunları **daha sonra EasyPanel'deki servislere environment variable olarak ekleyeceksiniz**):
+   - **Project URL** → `SUPABASE_URL` (örnek: `https://xxxxx.supabase.co`)
+   - **service_role key** → `SUPABASE_SERVICE_ROLE_KEY` (⚠️ Gizli tutun! Router servisinde kullanılacak)
+   - **anon public key** → `NEXT_PUBLIC_SUPABASE_ANON_KEY` (Dashboard servisinde kullanılacak)
+
+**💡 Not:** Bu bilgileri kopyalayın, çünkü EasyPanel'de servis oluştururken environment variables olarak ekleyeceksiniz.
 
 ### Adım 4: Database Schema Oluşturma (Manuel Yöntem)
 
@@ -194,10 +268,15 @@ EasyPanel'de 3 servis oluşturacağız. **ÖNEMLİ:** LiteLLM'i önce oluşturun
 
 #### Adım 1: Yeni Servis Oluştur
 
-1. EasyPanel Project → **"Services"** → **"New Service"**
-2. **Service Type:** `Docker Image`
-3. **Service Name:** `litellm`
-4. **Image:** `ghcr.io/berriai/litellm:main-latest`
+1. EasyPanel Project → **"Services"** sekmesinde **"+ Service"** butonuna tıklayın
+2. Açılan servis seçeneklerinden **"App"** seçeneğine tıklayın
+   - ⚠️ **NOT:** "Compose" değil, "App" seçin!
+   - "App" = Docker Image deploy etmek için
+   - "Compose" = docker-compose.yml dosyası için (LiteLLM için gerekli değil)
+3. **Service Name:** `litellm` yazın
+4. **Source** sekmesinde:
+   - **Image:** `ghcr.io/berriai/litellm:main-latest` yazın
+   - Veya **Repository URL** alanına aynı image'ı yazın
 5. **Port:** `4000` (internal only, public'e expose etmeyin!)
 
 #### Adım 2: Environment Variables
@@ -212,17 +291,28 @@ PORT=4000
 MODEL_LIST=claude-3-5-sonnet-20241022,deepseek-chat,gpt-4o-mini
 ```
 
-#### Adım 3: Network Ayarları
+#### Adım 3: Port Ayarları (ÖNEMLİ!)
 
-- **Network:** Default network (diğer servislerle aynı)
-- **Public Port:** ❌ **KAPALI** (internal only!)
+**📍 Nerede:** Ana sayfada **"Ports"** bölümü var (ekranda görünüyor)
 
-#### Adım 4: Health Check
+**⚠️ ÖNEMLİ:** LiteLLM için **PORT EKLEMEYİN!**
 
-**Health Check** sekmesinde:
+- **"Add Port"** butonuna **TIKLAMAYIN**
+- LiteLLM sadece internal network'te çalışmalı (Router servisi `http://litellm:4000` ile erişecek)
+- Public port eklemek güvenlik riski oluşturur
+
+**Sadece şunu yapın:** Hiçbir şey yapmayın, port eklemeyin! ✅
+
+#### Adım 4: Health Check (Opsiyonel)
+
+**📍 Nerede:** Sol menüden **"Advanced"** sekmesi → **"Health Check"** bölümü
+
+**Opsiyonel ayarlar (gerekli değil):**
 - **Path:** `/health`
 - **Port:** `4000`
 - **Interval:** `30s`
+
+**💡 Not:** Health Check opsiyoneldir, şimdilik atlayabilirsiniz.
 
 #### Adım 5: Deploy
 
@@ -235,18 +325,38 @@ MODEL_LIST=claude-3-5-sonnet-20241022,deepseek-chat,gpt-4o-mini
 
 #### Adım 1: Yeni Servis Oluştur
 
-1. **Service Type:** `Dockerfile` (veya `Git Repository` eğer repo'ya push ettiyseniz)
-2. **Service Name:** `cfx-router`
-3. **Build Context:** 
-   - Git kullanıyorsanız: Repository URL + branch
-   - Manual upload: `services/cfx-router` klasörünü zip olarak yükleyin
-4. **Dockerfile Path:** `services/cfx-router/Dockerfile` (veya sadece `Dockerfile`)
+1. EasyPanel → **"+ Service"** → **"App"** seçin
+2. **Service Name:** `cfx-router` yazın
+3. **Source** sekmesinde **"Git"** tab'ını seçin (ekranda görünüyor)
 
-#### Adım 2: Build Ayarları
+#### Adım 2: Git Repository Ayarları
 
-**Build Settings:**
-- **Build Command:** (otomatik, Dockerfile'dan alınır)
-- **Build Context:** `services/cfx-router`
+**Ekranda görünen alanları doldurun:**
+
+1. **Repository URL:** 
+   - Zaten doldurulmuş: `https://github.com/doctorcmptrmita2/12CodexFlowMEGA`
+   - ✅ Doğru, değiştirmeyin
+
+2. **Branch:**
+   - `main` (veya hangi branch'te kod varsa)
+   - ✅ Doğru görünüyor
+
+3. **Build Path:** ⚠️ **ÖNEMLİ - DEĞİŞTİRİN!**
+   - Şu an: `/` (yanlış - requirements.txt bulunamıyor!)
+   - **Değiştirin:** `services/cfx-router`
+   - 💡 Neden? Dockerfile `COPY requirements.txt .` yapıyor, dosya `services/cfx-router/` içinde
+
+4. **Dockerfile Path:**
+   - **"Dockerfile"** tab'ına geçin (Git tab'ının yanında)
+   - **Dockerfile Path:** `Dockerfile` yazın (sadece dosya adı, Build Path'e göre otomatik bulunur)
+   - ⚠️ **NOT:** `services/cfx-router/Dockerfile` YAZMAYIN, sadece `Dockerfile` yazın!
+
+5. **"Save"** butonuna tıklayın
+
+**✅ Doğru Ayarlar:**
+- **Build Path:** `services/cfx-router` (router klasörü)
+- **Dockerfile Path:** `Dockerfile` (Build Path içinde otomatik bulunur)
+- Bu şekilde Dockerfile `requirements.txt` ve diğer dosyaları bulabilir!
 
 #### Adım 3: Environment Variables
 
@@ -376,6 +486,16 @@ EasyPanel'de Nginx container'ı oluşturup routing yapılandırın.
 ## Environment Variables Özeti
 
 ### LiteLLM Servisi
+
+**OpenRouter Kullanımı (Önerilen):**
+
+```
+OPENROUTER_API_KEY=sk-or-v1-your-openrouter-key-here
+PORT=4000
+MODEL_LIST=openrouter/anthropic/claude-3.5-sonnet,openrouter/deepseek/deepseek-chat,openrouter/openai/gpt-4o-mini
+```
+
+**Veya Direkt Provider Keys:**
 
 ```
 ANTHROPIC_API_KEY=sk-ant-...
