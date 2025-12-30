@@ -407,18 +407,38 @@ CORS_ALLOWED_ORIGINS=*
 
 #### Adım 1: Yeni Servis Oluştur
 
-1. **Service Type:** `Dockerfile` (veya `Git Repository`)
-2. **Service Name:** `dashboard`
-3. **Build Context:**
-   - Git: Repository URL + branch
-   - Manual: `apps/dashboard` klasörünü zip olarak yükleyin
-4. **Dockerfile Path:** `apps/dashboard/Dockerfile`
+1. EasyPanel → **"+ Service"** → **"App"** seçin
+2. **Service Name:** `dashboard` yazın
+3. **Source** sekmesinde **"Git"** tab'ını seçin
 
-#### Adım 2: Build Ayarları
+#### Adım 2: Git Repository Ayarları
 
-**Build Settings:**
-- **Build Command:** (otomatik)
-- **Build Context:** `apps/dashboard`
+**Ekranda görünen alanları doldurun:**
+
+1. **Repository URL:** 
+   - Zaten doldurulmuş: `https://github.com/doctorcmptrmita2/12CodexFlowMEGA`
+   - ✅ Doğru, değiştirmeyin
+
+2. **Branch:**
+   - `main` (veya hangi branch'te kod varsa)
+   - ✅ Doğru görünüyor
+
+3. **Build Path:** ⚠️ **ÖNEMLİ - DEĞİŞTİRİN!**
+   - Şu an: `/` (yanlış - package.json bulunamıyor!)
+   - **Değiştirin:** `apps/dashboard`
+   - 💡 Neden? Dockerfile `COPY package.json .` yapıyor, dosya `apps/dashboard/` içinde
+
+4. **Dockerfile Path:**
+   - **"Dockerfile"** tab'ına geçin (Git tab'ının yanında)
+   - **Dockerfile Path:** `Dockerfile` yazın (sadece dosya adı, Build Path'e göre otomatik bulunur)
+   - ⚠️ **NOT:** `apps/dashboard/Dockerfile` YAZMAYIN, sadece `Dockerfile` yazın!
+
+5. **"Save"** butonuna tıklayın
+
+**✅ Doğru Ayarlar:**
+- **Build Path:** `apps/dashboard` (dashboard klasörü)
+- **Dockerfile Path:** `Dockerfile` (Build Path içinde otomatik bulunur)
+- Bu şekilde Dockerfile `package.json` ve diğer dosyaları bulabilir!
 
 **⚠️ NOT:** Next.js standalone build için `next.config.js`'de `output: 'standalone'` olmalı (zaten var).
 
