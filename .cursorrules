@@ -1,0 +1,55 @@
+# CF-X Cursor Rules (Repo-wide)
+# Purpose: enforce safe, modular, predictable diffs for CF-X monorepo.
+
+## Output & Diff Discipline
+- Always output changes in "Part 1/Part 2/..." format.
+- Max 3 files changed per Part (repo-wide).
+- Use unified diff compatible with applyUnifiedDiff.
+- Do NOT rewrite entire files unless explicitly requested. Prefer minimal diffs.
+
+## Anchor Editing (Mandatory)
+- Before each edit, provide:
+  - Find Anchor: unique existing snippet
+  - Replace With: replacement snippet
+- If the file does not exist, add it as a new file via unified diff.
+
+## Service Focus
+- Each Part MUST target ONE service domain only:
+  - Router: /services/cfx-router/** and /config/**
+  - Dashboard: /apps/dashboard/**
+  - LiteLLM: /services/litellm/** (config only)
+  - Infra: /infra/** and docker-compose.yml
+- Do not modify other domains in the same Part.
+
+## Security Boundaries
+- Never place SUPABASE_SERVICE_ROLE_KEY in dashboard code or client bundles.
+- Provider API keys live ONLY in LiteLLM container.
+- Redact secrets from logs; never log Authorization headers or raw API keys.
+- Do NOT suggest bypassing provider billing/ToS.
+
+## API Compatibility
+- Router must expose OpenAI-compatible endpoint:
+  - POST /v1/chat/completions
+- Support SSE streaming with correct "data:" framing and [DONE].
+- Always set headers:
+  - X-CFX-Request-Id, X-CFX-Stage, X-CFX-Model-Used
+  - X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset
+
+## Stability
+- Implement timeouts for upstream LiteLLM requests.
+- Retry ONLY transient 5xx (502/503/504), max 1 retry.
+- Circuit breaker on repeated upstream failures (return 503).
+- Per-user streaming concurrency cap (default 2).
+- Best-effort async logging; logging failures must not fail user requests.
+
+## No Terminal Commands
+- Do not run commands or ask user to run commands as part of "verification".
+- Provide manual checks only (what to click/what to look for).
+
+## Documentation
+- After each Part, include:
+  - what changed
+  - manual verification steps
+  - risks/edge-cases
+  - ask approval before next Part
+

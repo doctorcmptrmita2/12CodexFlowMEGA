@@ -1,0 +1,72 @@
+# Traefik Static Configuration
+# Entrypoints, providers, and global settings
+
+# Global settings
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+# Entrypoints (ports exposed to internet)
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        # Redirect HTTP to HTTPS (uncomment when SSL is configured)
+        # entryPoint:
+        #   to: websecure
+        #   scheme: https
+        #   permanent: true
+
+  # HTTPS entrypoint (uncomment when SSL is configured)
+  # websecure:
+  #   address: ":443"
+  #   http:
+  #     tls:
+  #       certResolver: letsencrypt
+
+# API and Dashboard (optional, disable in production)
+api:
+  dashboard: true
+  insecure: true  # Set to false and configure auth in production
+  # debug: true  # Enable for debugging
+
+# Providers
+providers:
+  # Docker provider (auto-discovery via labels)
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: cfx-network
+    watch: true
+
+  # File provider (for dynamic routing rules)
+  file:
+    filename: /dynamic.yml
+    watch: true
+
+# Logging
+log:
+  level: INFO
+  format: json
+  filePath: /var/log/traefik.log
+
+# Access logs (optional)
+accessLog:
+  filePath: /var/log/traefik-access.log
+  format: json
+
+# Metrics (optional, for monitoring)
+# metrics:
+#   prometheus:
+#     entryPoint: web
+
+# TLS (uncomment when using Let's Encrypt)
+# certificatesResolvers:
+#   letsencrypt:
+#     acme:
+#       email: your-email@example.com
+#       storage: /certs/acme.json
+#       httpChallenge:
+#         entryPoint: web
+

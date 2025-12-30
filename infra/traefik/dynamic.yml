@@ -1,0 +1,91 @@
+# Traefik Dynamic Configuration
+# Routing rules and middleware
+
+http:
+  # Middleware (optional, for rate limiting, auth, etc.)
+  middlewares:
+    # CORS middleware (if needed)
+    # cors:
+    #   headers:
+    #     accessControlAllowMethods:
+    #       - GET
+    #       - POST
+    #       - OPTIONS
+    #     accessControlAllowOriginList:
+    #       - "*"
+    #     accessControlMaxAge: 100
+    #     addVaryHeader: true
+
+    # Rate limiting middleware (optional)
+    # rate-limit:
+    #   rateLimit:
+    #     average: 100
+    #     burst: 50
+
+  # Routers (routing rules)
+  routers:
+    # Dashboard router - serves all web paths except /v1/*
+    dashboard:
+      rule: "PathPrefix(`/`) && !PathPrefix(`/v1`)"
+      entryPoints:
+        - web
+      service: dashboard
+      priority: 10
+      # middlewares:
+      #   - cors
+
+    # Router service - handles /v1/* API requests
+    router:
+      rule: "PathPrefix(`/v1`)"
+      entryPoints:
+        - web
+      service: router
+      priority: 20
+      # middlewares:
+      #   - cors
+      #   - rate-limit
+
+    # HTTPS routers (uncomment when SSL is configured)
+    # dashboard-secure:
+    #   rule: "PathPrefix(`/`) && !PathPrefix(`/v1`)"
+    #   entryPoints:
+    #     - websecure
+    #   service: dashboard
+    #   tls:
+    #     certResolver: letsencrypt
+    #   priority: 10
+
+    # router-secure:
+    #   rule: "PathPrefix(`/v1`)"
+    #   entryPoints:
+    #     - websecure
+    #   service: router
+    #   tls:
+    #     certResolver: letsencrypt
+    #   priority: 20
+
+  # Services (backend services)
+  services:
+    # Dashboard service (Next.js)
+    dashboard:
+      loadBalancer:
+        servers:
+          - url: "http://dashboard:3000"
+        healthCheck:
+          path: "/"
+          interval: "30s"
+          timeout: "10s"
+
+    # Router service (FastAPI)
+    router:
+      loadBalancer:
+        servers:
+          - url: "http://cfx-router:8000"
+        healthCheck:
+          path: "/health"
+          interval: "30s"
+          timeout: "10s"
+
+    # Note: LiteLLM is NOT exposed here - it's internal only
+    # Router accesses it directly via Docker network: http://litellm:4000
+

@@ -1,0 +1,114 @@
+version: '3.8'
+
+services:
+  # Traefik Reverse Proxy - Single Public Entrypoint
+  traefik:
+    image: traefik:v2.11
+    container_name: cfx-traefik
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      # Traefik dashboard (optional, disable in production)
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./infra/traefik/traefik.yml:/traefik.yml:ro
+      - ./infra/traefik/dynamic.yml:/dynamic.yml:ro
+      # TLS certificates (if using Let's Encrypt)
+      # - ./infra/traefik/certs:/certs:ro
+    command:
+      - --configfile=/traefik.yml
+    networks:
+      - cfx-network
+    labels:
+      - "traefik.enable=true"
+
+  # Dashboard - Next.js App
+  dashboard:
+    build:
+      context: ./apps/dashboard
+      dockerfile: Dockerfile
+    container_name: cfx-dashboard
+    restart: unless-stopped
+    environment:
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - NODE_ENV=production
+    networks:
+      - cfx-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.dashboard.entrypoints=web"
+      - "traefik.http.services.dashboard.loadbalancer.server.port=3000"
+      # HTTPS (uncomment when SSL is configured)
+      # - "traefik.http.routers.dashboard-secure.rule=PathPrefix(`/`)"
+      # - "traefik.http.routers.dashboard-secure.entrypoints=websecure"
+      # - "traefik.http.routers.dashboard-secure.tls=true"
+    depends_on:
+      - traefik
+
+  # CF-X Router - FastAPI Gateway
+  cfx-router:
+    build:
+      context: ./services/cfx-router
+      dockerfile: Dockerfile
+    container_name: cfx-router
+    restart: unless-stopped
+    environment:
+      - PORT=8000
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - HASH_SALT=${HASH_SALT}
+      - KEY_HASH_PEPPER=${KEY_HASH_PEPPER}
+      - LITELLM_BASE_URL=http://litellm:4000
+      - DAILY_REQUEST_LIMIT=${DAILY_REQUEST_LIMIT:-1000}
+      - STREAMING_CONCURRENCY_CAP=${STREAMING_CONCURRENCY_CAP:-2}
+    networks:
+      - cfx-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.router.rule=PathPrefix(`/v1`)"
+      - "traefik.http.routers.router.entrypoints=web"
+      - "traefik.http.services.router.loadbalancer.server.port=8000"
+      # HTTPS (uncomment when SSL is configured)
+      # - "traefik.http.routers.router-secure.rule=PathPrefix(`/v1`)"
+      # - "traefik.http.routers.router-secure.entrypoints=websecure"
+      # - "traefik.http.routers.router-secure.tls=true"
+    depends_on:
+      - traefik
+      - litellm
+
+  # LiteLLM - Provider Gateway (INTERNAL ONLY)
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    container_name: cfx-litellm
+    restart: unless-stopped
+    environment:
+      # Provider API keys (set in .env)
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      # LiteLLM config
+      - PORT=4000
+      # Model config (can be mounted from file)
+      - MODEL_LIST=${MODEL_LIST:-claude-3-5-sonnet-20241022,deepseek-chat,gpt-4o-mini}
+    networks:
+      - cfx-network
+    # NO Traefik labels - internal only, not exposed to internet
+    # Router accesses via http://litellm:4000
+    volumes:
+      # Optional: mount custom config
+      # - ./services/litellm/config.yaml:/app/config.yaml:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  cfx-network:
+    driver: bridge
+    name: cfx-network
+

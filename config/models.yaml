@@ -1,0 +1,32 @@
+# CF-X Stage → Model Mapping
+# Single source of truth for routing logic
+# Models are referenced by LiteLLM model names
+
+stages:
+  plan:
+    model: "claude-3-5-sonnet-20241022"
+    description: "Architect stage - produces plan/spec only (no code)"
+    max_tokens: 4096
+    temperature: 0.7
+
+  code:
+    model: "deepseek-chat"
+    description: "Developer stage - produces unified diffs only"
+    max_tokens: 16384
+    temperature: 0.3
+
+  review:
+    model: "gpt-4o-mini"
+    description: "Reviewer stage - security + logic + compatibility checks"
+    max_tokens: 4096
+    temperature: 0.2
+
+  direct:
+    model: null  # Direct mode disabled by default
+    description: "Direct model selection (disabled in MVP)"
+    max_tokens: null
+    temperature: null
+
+# Default stage if not specified
+default_stage: "plan"
+
