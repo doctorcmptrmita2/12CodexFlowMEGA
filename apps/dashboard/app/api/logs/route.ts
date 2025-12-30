@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
     // Time range filter
     if (timeRange && timeRange !== 'all') {
       const now = new Date();
-      let start: Date;
+      let start: Date | undefined;
       
       switch (timeRange) {
         case 'today':
@@ -79,6 +79,7 @@ export async function GET(request: NextRequest) {
           }
           break;
         default:
+          // Unknown timeRange, skip filter
           break;
       }
       
