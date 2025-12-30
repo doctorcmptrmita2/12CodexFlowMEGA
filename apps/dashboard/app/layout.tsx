@@ -2,6 +2,7 @@
  * Root Layout for CF-X Dashboard
  * Required by Next.js App Router
  */
+import React from 'react';
 import type { Metadata } from 'next';
 import './globals.css';
 

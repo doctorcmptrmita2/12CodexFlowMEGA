@@ -49,5 +49,5 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
 # Use standalone server if available, otherwise use next start
-CMD if [ -f server.js ]; then node server.js; else npm start; fi
+CMD ["sh", "-c", "if [ -f server.js ]; then node server.js; else npm start; fi"]
 
